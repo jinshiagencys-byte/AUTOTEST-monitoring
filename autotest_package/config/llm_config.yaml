@@ -34,9 +34,9 @@ providers:
     temperature: 0.2
   
   google-gemini:
-    analysis_model: "gemini-2.5-flash"
-    selenium_model: "gemini-2.5-flash"
-    result_analysis_model: "gemini-2.5-flash"
+    analysis_model: "gemini-3.1-flash-lite"
+    selenium_model: "gemini-3.1-flash-lite"
+    result_analysis_model: "gemini-3.1-flash-lite"
     temperature: 0.1
 
   anthropic:

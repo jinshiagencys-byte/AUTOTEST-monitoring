@@ -21,7 +21,7 @@ class LLMWrapper:
         
         Args:
             config_path (str, optional): Path to configuration file
-            llm_provider_choice (int): Provider choice (1=OpenAI, 2=Groq, 3=Google-Gemini, 4=Anthropic, 5=Ollama)
+            llm_provider_choice (int): Provider choice (1=OpenAI, 2=Groq, 3=Google-Gemini, 4=Anthropic, 5=Ollama, 6=Apinex)
         """
         if config_path is None:
             # Get the package directory and default config path
@@ -37,7 +37,8 @@ class LLMWrapper:
             2: "groq", 
             3: "google-gemini",
             4: "anthropic",
-            5: "ollama"
+            5: "ollama",
+            6: "apinex",
         }
             
         # self.provider = self.config["model_provider"]
@@ -56,7 +57,8 @@ class LLMWrapper:
             "openai": "OPENAI_API_KEY",
             "groq": "GROQ_API_KEY",
             "google-gemini": "GOOGLE_API_KEY",
-            "anthropic": "ANTHROPIC_API_KEY"
+            "anthropic": "ANTHROPIC_API_KEY",
+            "apinex": "APINEX_API_KEY",
         }
         
         api_key = os.getenv(key_mapping[provider])
@@ -172,7 +174,31 @@ class LLMWrapper:
                     # model_kwargs={"response_format": {"type": "json_object"}}
                 ),
             }
-        
+
+        elif provider == "apinex":
+            # apinex.bond expose une API compatible OpenAI (mêmes schémas de requête/réponse),
+            # donc on réutilise ChatOpenAI avec un base_url custom plutôt qu'un nouveau client.
+            return {
+                "analysis": ChatOpenAI(
+                    api_key=api_key,
+                    base_url="https://api.apinex.bond/v1",
+                    model=params["analysis_model"],
+                    temperature=params["temperature"],
+                ),
+                "selenium": ChatOpenAI(
+                    api_key=api_key,
+                    base_url="https://api.apinex.bond/v1",
+                    model=params["selenium_model"],
+                    temperature=params["temperature"],
+                ),
+                "result_analysis": ChatOpenAI(
+                    api_key=api_key,
+                    base_url="https://api.apinex.bond/v1",
+                    model=params["result_analysis_model"],
+                    temperature=params["temperature"],
+                ),
+            }
+
         elif provider == "ollama":
             return {
                 "analysis": ChatOllama(
@@ -195,7 +221,7 @@ class LLMWrapper:
         
     def _needs_json_in_prompt(self):
         """Check if provider needs JSON instruction in prompt instead of model_kwargs"""
-        return self.provider in ["google-gemini", "anthropic", "ollama"]
+        return self.provider in ["google-gemini", "anthropic", "ollama", "apinex"]
 
     def generate(self, system_prompt, user_prompt, model_type="analysis"):
         """

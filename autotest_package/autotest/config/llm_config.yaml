@@ -21,6 +21,13 @@
 
 # Provider configurations - all available
 providers:
+
+  apinex:
+    analysis_model: "free/mimo-v2.6-pro"
+    selenium_model: "free/mimo-v2.6-pro"
+    result_analysis_model: "free/mimo-v2.6-pro"
+    temperature: 0.2
+    
   openai:
     analysis_model: "gpt-4.1-mini-2025-04-14"
     selenium_model: "gpt-4.1-2025-04-14"

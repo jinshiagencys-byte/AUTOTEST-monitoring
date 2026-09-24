@@ -36,6 +36,7 @@ from sqlalchemy import func
 from ..tables.page import Page
 from ..tables.test_case_data import TestCase
 from ..tables.domain import Domain
+from ..tables.redirect import Redirect  # Register Page's relationship with SQLAlchemy.
 
 from bs4 import BeautifulSoup, Comment
 import sys
@@ -100,7 +101,8 @@ class WebTestGenerator:
     """Main class for automated web test generation"""
     
     def __init__(self, log_level="INFO", selenium_version="4.15.2", 
-                 wait_time="", testing_tool="selenium", language="python", llm_provider_choice=1):
+                 wait_time="", testing_tool="selenium", language="python", llm_provider_choice=1,
+                 driver_factory=None):
         """
         Initialize WebTestGenerator
         
@@ -142,7 +144,10 @@ class WebTestGenerator:
         #self.extract_test_relevant_html()
         
         # Setup browser and URL extractor
-        self.setup_browser()
+        if driver_factory is None:
+            self.setup_browser()
+        else:
+            self.driver = driver_factory()
         self.url_extractor = URLExtractor(self.driver, self.logger)
 
         self._generation_interrupted = False
@@ -968,7 +973,7 @@ class WebTestGenerator:
             self.logger.error(f"Failed to load test data: {str(e)}")
             return None
 
-    def generate_page_specific_tests(self, page_metadata, minimized_html):
+    def generate_page_specific_tests(self, page_metadata, minimized_html, interactive=True):
         """
         Generate context-aware test cases based on page content
         
@@ -1043,8 +1048,8 @@ class WebTestGenerator:
                 self.logger.debug(f"Successfully parsed {len(auto_test_cases)} auto-generated test cases")
                 self.logger.debug("Auto-Generated Test Case Details:\n" + json.dumps(auto_test_cases, indent=2))
 
-                # Ask user if they want to add manual test cases
-                while True:
+                # Scheduled generation must never wait for stdin.
+                while interactive:
                     try:
                         user_input = input("\nDo you want to add manual test cases? (y/n): ").strip().lower()
                         self.logger.debug("Do you want to add manual test cases? (y/n): ")
@@ -1287,7 +1292,37 @@ class WebTestGenerator:
             self.logger.error(f"Manual test case generation failed: {str(e)}")
             return None
         
-    def generate_script_for_test_case(self, test_case, page_metadata, minimized_html, require_login, username, password):
+    def generate_monitoring_page(self, url):
+        """Phase A only: reuse analysis/test generation without execution or stdin."""
+        from ..monitoring.runtime import check_blocked, origin
+
+        self.driver.get(url)
+        check_blocked(self.driver)
+        if origin(self.driver.current_url) != origin(url):
+            raise ValueError("Page redirected outside the monitored origin")
+        html = self.extract_test_relevant_html(self.driver.page_source)
+        dynamic = self.llm_page_analysis(html)
+        if not isinstance(dynamic, dict) or not dynamic:
+            raise ValueError("Page analysis failed; previous artifact retained")
+        metadata = {
+            **dynamic,
+            "title": self.driver.title,
+            "url": url,
+            "forms": self.extract_forms(),
+            "buttons": self.extract_interactive_elements(),
+            "tables": self.extract_data_tables(),
+            "key_flows": self.identify_key_flows(),
+        }
+        cases = self.generate_page_specific_tests(metadata, html, interactive=False)
+        if not isinstance(cases, list) or not cases:
+            raise ValueError("No test cases generated; previous artifact retained")
+        source = self.generate_script_for_test_case(
+            {"name": "Page monitoring", "test_cases": cases}, metadata, html,
+            False, None, None, monitoring=True)
+        return source, {"metadata": metadata, "test_cases": cases}
+
+    def generate_script_for_test_case(self, test_case, page_metadata, minimized_html, require_login, username, password,
+                                      monitoring=False):
         """
         Generate test script for a specific test case
         
@@ -1299,6 +1334,20 @@ class WebTestGenerator:
         Returns:
             tuple: (script_content, filename) - Generated test script code and saved filename
         """
+        if monitoring:
+            from ..monitoring.contract import validate_script
+
+            prompts = PromptManager(os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "config", "monitoring_prompts.yaml"))
+            response = self.llm.generate(
+                prompts.get_prompt("monitoring_script", "system"),
+                prompts.get_prompt("monitoring_script", "user").format(
+                    test_case=json.dumps(test_case), page_metadata=json.dumps(page_metadata),
+                    page_source=minimized_html), model_type="selenium")
+            code = self._extract_code_from_response(response)
+            validate_script(code)
+            return code + "\n"
+
         captcha_wait_time = self.wait_time or "2 minutes (120 seconds)"
         
         try:

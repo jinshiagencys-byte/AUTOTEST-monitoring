@@ -40,7 +40,7 @@ setup(
     },
     include_package_data=True,
     package_data={
-        'autotest': ['config/*.yaml', 'config/*.json'],
+        'autotest': ['config/*.yaml', 'config/*.json', 'monitoring/NOTICE'],
     },
     entry_points={
         'console_scripts': [

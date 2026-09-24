@@ -1,0 +1,14 @@
+# User crontab example: replace example.com and verify paths before installation.
+# This file is not installed automatically. Run as bill, not as root.
+SHELL=/bin/sh
+PATH=/usr/local/bin:/usr/bin:/bin
+PYTHONPATH=/home/bill/AUTOTEST/autotest_package
+
+# Phase A: refresh discovered pages at 03:00 on the first day of each month.
+0 3 1 * * cd /home/bill/AUTOTEST && /usr/bin/flock -n /home/bill/AUTOTEST/.monitor-generation.lock /home/bill/AUTOTEST/.venv/bin/python -m autotest.monitoring generate --site https://example.com/ --store /home/bill/AUTOTEST/monitoring_artifacts --output /home/bill/AUTOTEST/monitoring_reports/generation.json
+
+# Separate Phase A worker: consume DOM-drift requests, never inside Phase B.
+*/10 * * * * cd /home/bill/AUTOTEST && /usr/bin/flock -n /home/bill/AUTOTEST/.monitor-generation.lock /home/bill/AUTOTEST/.venv/bin/python -m autotest.monitoring regenerate --site https://example.com/ --pending --store /home/bill/AUTOTEST/monitoring_artifacts --output /home/bill/AUTOTEST/monitoring_reports/regeneration.json
+
+# Phase B: replay only. Its JSON output is the input boundary for Phase C.
+*/5 * * * * cd /home/bill/AUTOTEST && /usr/bin/flock -n /home/bill/AUTOTEST/.monitor-run.lock /home/bill/AUTOTEST/.venv/bin/python -m autotest.monitoring run --site https://example.com/ --store /home/bill/AUTOTEST/monitoring_artifacts --output /home/bill/AUTOTEST/monitoring_reports/latest.json

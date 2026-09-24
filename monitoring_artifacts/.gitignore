@@ -1,0 +1,5 @@
+# Version script.py/test.py, metadata.json and manifest.json after review.
+# Runtime queue/locks are local state, never versioned.
+**/.lock
+**/queue/
+**/.tmp-*

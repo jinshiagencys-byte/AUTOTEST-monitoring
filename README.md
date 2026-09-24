@@ -3,6 +3,12 @@
 <img src="./autotest_image.jpg" alt="Project Logo" width="100" height="auto"> <!-- Include a project logo or banner here, if applicable -->
 
 
+## Monitoring pipeline
+
+For separate generation, LLM-free Selenium replay and JSON results for an external
+judgment phase, see [the monitoring guide](MONITORING.md). The legacy workflow
+below remains unchanged.
+
 ## Table of  Contents
 
 - [Project Name](#project-name)

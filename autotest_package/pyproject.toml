@@ -39,7 +39,8 @@ dependencies = [
     "langchain==0.3.24",
     "playwright==1.42.0",
     "pyppeteer==2.0.0",
-    "bs4==0.0.2"
+    "bs4==0.0.2",
+    "sqlalchemy>=2.0,<3"
 ]
 
 [project.optional-dependencies]

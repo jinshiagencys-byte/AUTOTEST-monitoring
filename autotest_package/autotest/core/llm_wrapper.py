@@ -39,6 +39,7 @@ class LLMWrapper:
             4: "anthropic",
             5: "ollama",
             6: "apinex",
+            7: "openrouter",
         }
             
         # self.provider = self.config["model_provider"]
@@ -59,6 +60,7 @@ class LLMWrapper:
             "google-gemini": "GOOGLE_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
             "apinex": "APINEX_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
         }
         
         api_key = os.getenv(key_mapping[provider])

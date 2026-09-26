@@ -21,7 +21,7 @@ class LLMWrapper:
         
         Args:
             config_path (str, optional): Path to configuration file
-            llm_provider_choice (int): Provider choice (1=OpenAI, 2=Groq, 3=Google-Gemini, 4=Anthropic, 5=Ollama, 6=Apinex)
+            llm_provider_choice (int): Provider choice (1=OpenAI, 2=Groq, 3=Google-Gemini, 4=Anthropic, 5=Ollama, 6=Apinex, 7=OpenRouter)
         """
         if config_path is None:
             # Get the package directory and default config path
@@ -218,12 +218,36 @@ class LLMWrapper:
                     format="json"  # Native JSON mode for Ollama
                 ),
             }
+
+        elif provider == "openrouter":
+            # OpenRouter expose une API compatible OpenAI, donc on réutilise
+            # ChatOpenAI avec un base_url custom, comme pour apinex.
+            return {
+                "analysis": ChatOpenAI(
+                    api_key=api_key,
+                    base_url="https://openrouter.ai/api/v1",
+                    model=params["analysis_model"],
+                    temperature=params["temperature"],
+                ),
+                "selenium": ChatOpenAI(
+                    api_key=api_key,
+                    base_url="https://openrouter.ai/api/v1",
+                    model=params["selenium_model"],
+                    temperature=params["temperature"],
+                ),
+                "result_analysis": ChatOpenAI(
+                    api_key=api_key,
+                    base_url="https://openrouter.ai/api/v1",
+                    model=params["result_analysis_model"],
+                    temperature=params["temperature"],
+                ),
+            }
         else:
             raise ValueError(f"Unsupported provider: {provider}")
         
     def _needs_json_in_prompt(self):
         """Check if provider needs JSON instruction in prompt instead of model_kwargs"""
-        return self.provider in ["google-gemini", "anthropic", "ollama", "apinex"]
+        return self.provider in ["google-gemini", "anthropic", "ollama", "apinex", "openrouter"]
 
     def generate(self, system_prompt, user_prompt, model_type="analysis"):
         """

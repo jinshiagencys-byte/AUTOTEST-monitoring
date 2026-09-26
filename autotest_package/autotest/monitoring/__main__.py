@@ -20,7 +20,7 @@ def main(argv=None):
         else:
             cmd.add_argument("--site", required=True)
         if name in ("generate", "regenerate"):
-            cmd.add_argument("--provider", type=int, choices=range(1, 6), default=1)
+            cmd.add_argument("--provider", type=int, choices=range(1, 7), default=1)
             cmd.add_argument("--max-depth", type=int, default=2)
         if name == "regenerate":
             group = cmd.add_mutually_exclusive_group(required=True)
